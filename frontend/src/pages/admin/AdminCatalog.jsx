@@ -2,8 +2,7 @@ import React, { useState, useEffect } from 'react';
 import Sidebar from '../../components/sidebar';
 import { Search, Plus, Pencil, Trash2, CheckCircle2, XCircle, BookOpen } from 'lucide-react';
 import { adminLayoutStyles, adminCatalogPageStyles as s } from '../../assets/dummyStyles';
-
-const API_BASE_URL = import.meta.env.VITE_API_BASE_URL || 'http://localhost:5000/api';
+import { API_BASE_URL } from '../../shared/apiConfig';
 
 const CATEGORIES = [
   'General', 'Computer Science', 'Programming', 'Software Engineering',

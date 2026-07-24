@@ -1,9 +1,10 @@
 import React, { createContext, useContext, useState, useEffect } from "react";
+import { API_BASE_URL as ROOT_API_URL } from "./apiConfig";
 
 const AuthContext = createContext(null);
 const SESSION_KEY = 'library-auth-session';
 const TOKEN_KEY = 'library-auth-token';
-const API_BASE_URL = `${import.meta.env.VITE_API_BASE_URL || 'http://localhost:5000/api'}/auth`;
+const API_BASE_URL = `${ROOT_API_URL}/auth`;
 
 const defaultAccounts = [];
 

@@ -3,8 +3,7 @@ import { Link } from 'react-router-dom';
 import Sidebar from '../../components/sidebar';
 import { Users, BookCopy, AlertTriangle, DollarSign, ArrowRight, CheckCircle2 } from 'lucide-react';
 import { adminLayoutStyles, adminDashboardStyles as s } from '../../assets/dummyStyles';
-
-const API_BASE_URL = import.meta.env.VITE_API_BASE_URL || 'http://localhost:5000/api';
+import { API_BASE_URL } from '../../shared/apiConfig';
 
 const AdminDashboard = () => {
   const [stats, setStats] = useState({

@@ -4,8 +4,7 @@ import Sidebar from '../../components/sidebar';
 import { useAuth } from '../../shared/AuthContext';
 import { BookOpen, AlertCircle, DollarSign, User, Award, ArrowRight } from 'lucide-react';
 import { userLayoutStyles, userDashboardPageStyles as s, userBookCardStyles as c } from '../../assets/dummyStyles';
-
-const API_BASE_URL = import.meta.env.VITE_API_BASE_URL || 'http://localhost:5000/api';
+import { API_BASE_URL } from '../../shared/apiConfig';
 
 const UserDashboard = () => {
   const { currentUser } = useAuth();

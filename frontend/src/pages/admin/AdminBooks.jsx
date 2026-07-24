@@ -2,8 +2,7 @@ import React, { useState, useEffect } from 'react';
 import Sidebar from '../../components/sidebar';
 import { Search, Plus, Trash2, CheckCircle2, AlertCircle, BookOpen } from 'lucide-react';
 import { adminLayoutStyles, adminBooksPageStyles as s } from '../../assets/dummyStyles';
-
-const API_BASE_URL = import.meta.env.VITE_API_BASE_URL || 'http://localhost:5000/api';
+import { API_BASE_URL } from '../../shared/apiConfig';
 
 const AdminBooks = () => {
   const [rollQuery, setRollQuery] = useState('');
