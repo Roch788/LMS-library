@@ -3,7 +3,7 @@ import Sidebar from '../../components/sidebar';
 import { Search, ChevronDown, ChevronUp, Users, BookOpen, AlertTriangle, CheckCircle, DollarSign } from 'lucide-react';
 import { adminLayoutStyles, adminUsersPageStyles as s } from '../../assets/dummyStyles';
 
-const API_BASE_URL = 'http://localhost:5000/api';
+const API_BASE_URL = import.meta.env.VITE_API_BASE_URL || 'http://localhost:5000/api';
 
 const AdminUsers = () => {
   const [students, setStudents] = useState([
