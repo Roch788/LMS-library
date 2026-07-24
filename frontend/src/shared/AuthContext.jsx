@@ -207,7 +207,7 @@ export const AuthProvider = ({ children }) => {
       return { ok: true, message: data.message };
     } catch (error) {
       console.error("Register API error:", error);
-      return { ok: true, message: "Demo mode: OTP sent to your email (Use 123456)" };
+      return { ok: false, error: "Network error: Unable to reach backend server. Please check your connection." };
     }
   };
 
@@ -228,10 +228,7 @@ export const AuthProvider = ({ children }) => {
       return { ok: true, message: data.message };
     } catch (error) {
       console.error("OTP API error:", error);
-      if (otp === "123456" || otp.length === 6) {
-        return { ok: true, message: "OTP verified successfully" };
-      }
-      return { ok: false, error: "Invalid OTP code" };
+      return { ok: false, error: "Network error: Unable to reach backend server." };
     }
   };
 
@@ -269,7 +266,7 @@ export const AuthProvider = ({ children }) => {
       return { ok: true, message: data.message };
     } catch (error) {
       console.error("Complete Profile API error:", error);
-      return { ok: true, message: "Profile completed successfully" };
+      return { ok: false, error: "Network error: Unable to reach backend server." };
     }
   };
 
