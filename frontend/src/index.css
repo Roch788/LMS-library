@@ -1,0 +1,54 @@
+@import "tailwindcss";
+
+@theme {
+  --color-library-panel: #14231d;
+  --color-library-panel-soft: #1c322a;
+  --color-library-paper: #f6f5ef;
+  --color-library-paper-deep: #eceae0;
+  --color-library-ink: #14231d;
+  --color-library-gold: #d4af37;
+  --color-library-gold-soft: #f3c969;
+  --color-library-success: #10b981;
+  
+  --spacing-72\.5: 18.125rem;
+  --spacing-375: 93.75rem;
+
+  --shadow-library: 0 25px 60px rgba(20, 35, 29, 0.18);
+  --shadow-library-soft: 0 18px 40px rgba(20, 35, 29, 0.08);
+  --shadow-library-medium: 0 20px 42px rgba(20, 35, 29, 0.12);
+
+  --font-display: 'Outfit', 'Playfair Display', system-ui, -apple-system, sans-serif;
+  --font-numeric: 'Inter', system-ui, sans-serif;
+}
+
+@layer base {
+  :root {
+    --color-library-paper: #f6f5ef;
+    --color-library-ink: #14231d;
+  }
+
+  body {
+    margin: 0;
+    padding: 0;
+    font-family: 'Inter', system-ui, -apple-system, sans-serif;
+    background-color: var(--color-library-paper);
+    color: var(--color-library-ink);
+    min-height: 100vh;
+    -webkit-font-smoothing: antialiased;
+  }
+
+  #root {
+    min-height: 100vh;
+    width: 100%;
+  }
+
+  .wrap-anywhere {
+    overflow-wrap: anywhere;
+    word-break: break-word;
+  }
+
+  .wrap-break-word {
+    overflow-wrap: break-word;
+    word-break: break-word;
+  }
+}
