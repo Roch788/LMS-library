@@ -1,6 +1,6 @@
 const Issue = require('../models/issue');
 const User = require('../models/userSchema');
-const FineSetting = require('../models/fineSetting');
+const FineSetting = require('../models/finesetting');
 
 //helper function
 const getLocalIsoDate = (value = new Date()) => {

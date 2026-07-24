@@ -6,7 +6,7 @@ const app = express();
 const PORT = process.env.PORT || 5000;
 const connectDB = require('./config/db')
 const authRouter = require('./routes/authroutes')
-const studentRouter = require('./routes/studentRoutes')
+const studentRouter = require('./routes/studentroutes')
 const bookRouter = require('./routes/bookroutes')
 const catalogRouter = require('./routes/catalogroutes')
 //MIDDLEWARES
