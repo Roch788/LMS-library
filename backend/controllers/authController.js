@@ -48,12 +48,10 @@ const registerUser = async (req, res) => {
             lowerCaseAlphabets: false,
             specialChars: false,
         })
-        //to send otp
-        try {
-            await sendOtp(normalizedEmail, otp);
-        } catch (err) {
-            console.log("Warning sending OTP email via Resend:", err.message || err);
-        }
+        // Dispatch OTP email in background so user registration response returns immediately
+        sendOtp(normalizedEmail, otp).catch((err) => {
+            console.log("Warning sending OTP email:", err.message || err);
+        });
 
         const hashedPassword = await bcrypt.hash(password, 10);
         const otpExpiry = new Date(Date.now() + 5 * 60 * 1000);
