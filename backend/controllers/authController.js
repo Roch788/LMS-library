@@ -283,17 +283,19 @@ const getAllStudents = async (req, res) => {
         const students = await User.find({ role: "user" }).select("-password").lean();
 
         for (let student of students) {
-            const studentEmail = (student.email || "").toLowerCase();
-            const studentIssues = await Issue.find({ userEmail: studentEmail })
-                .sort({ createdAt: -1 })
-                .lean();
+            const studentIssues = await Issue.find({
+                $or: [
+                    { userEmail: student.email },
+                    { rollNumber: student.rollNo }
+                ]
+            }).sort({ createdAt: -1 }).lean();
 
             let activeCount = 0;
             let overdueCount = 0;
 
             const formattedIssues = studentIssues.map((issue) => {
                 const isReturned = Boolean(issue.returnedOn);
-                const isOverdue = !isReturned && new Date(issue.dueDate) < new Date();
+                const isOverdue = !isReturned && (new Date(issue.dueDate) < new Date());
 
                 if (!isReturned) {
                     activeCount++;
@@ -302,6 +304,7 @@ const getAllStudents = async (req, res) => {
 
                 return {
                     ...issue,
+                    fineAmount: `$${(Number(issue.manualFine) || 0).toFixed(2)}`,
                     status: isReturned ? "returned" : isOverdue ? "overdue" : "active",
                 };
             });

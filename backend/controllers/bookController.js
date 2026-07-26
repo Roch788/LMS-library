@@ -36,10 +36,7 @@ const issueManualBook = async (req, res) => {
 
         // Find student by roll number
         const rollNo = String(studentDetails?.rollNo || "").trim();
-        const student = await User.findOne({
-            rollNo: { $regex: `^${rollNo}$`, $options: "i" },
-            role: "user"
-        });
+        const student = await User.findOne({ rollNo: rollNo });
 
         if (!student) {
             return res.status(404).json({ message: "Student not found in system. Please select a valid registered student." });
@@ -55,7 +52,7 @@ const issueManualBook = async (req, res) => {
             const code = book.bookCode.trim();
 
             const existingIssue = await Issue.findOne({
-                bookCode: { $regex: `^${code}$`, $options: "i" },
+                bookCode: code,
                 returnedOn: null
             });
 
