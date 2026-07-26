@@ -33,13 +33,63 @@ const issueManualBook = async (req, res) => {
         if (!Array.isArray(books) || books.length === 0) {
             return res.status(400).json({ message: "No books provided for issuing" });
         }
-        const student = await User.findOne({ rollNo: studentDetails.rollNo });
-        if (!student) return res.status(404).json({ message: "Student not found" });
+
+        const roll = String(studentDetails?.rollNo || "").trim();
+        let student = null;
+        if (roll) {
+            student = await User.findOne({
+                rollNo: { $regex: new RegExp(`^${roll}$`, "i") },
+                role: "user"
+            });
+            if (!student) {
+                student = await User.findOne({
+                    $or: [
+                        { rollNo: { $regex: roll, $options: "i" } },
+                        { studentId: { $regex: roll, $options: "i" } }
+                    ],
+                    role: "user"
+                });
+            }
+        }
+
+        if (!student) {
+            return res.status(404).json({ message: "Student not found in system. Please select a valid registered student." });
+        }
+
         const todayIso = getLocalIsoDate();
         const validBooks = books.filter(book => book.bookCode && book.title && book.dueDate);
         if (validBooks.length === 0) {
-            return res.status(400).json({ message: "No valid books provided for issuing please enter valid book details" });
+            return res.status(400).json({ message: "No valid books provided for issuing. Please enter valid book details." });
         }
+
+        // Check if any book is already currently issued (unreturned) to this student or currently active
+        for (const book of validBooks) {
+            const trimmedCode = book.bookCode.trim();
+
+            // Check if issued to THIS student and not yet returned
+            const existingIssueForStudent = await Issue.findOne({
+                userEmail: student.email.toLowerCase(),
+                bookCode: { $regex: new RegExp(`^${trimmedCode}$`, "i") },
+                returnedOn: null
+            });
+            if (existingIssueForStudent) {
+                return res.status(400).json({
+                    message: `Book "${trimmedCode}" (${existingIssueForStudent.title || book.title}) is already issued to ${student.name} and has not been returned yet.`
+                });
+            }
+
+            // Check if issued to ANY student and not yet returned
+            const existingActiveIssue = await Issue.findOne({
+                bookCode: { $regex: new RegExp(`^${trimmedCode}$`, "i") },
+                returnedOn: null
+            });
+            if (existingActiveIssue) {
+                return res.status(400).json({
+                    message: `Book "${trimmedCode}" is currently issued to student "${existingActiveIssue.userName}" (${existingActiveIssue.userEmail}) and has not been returned yet.`
+                });
+            }
+        }
+
         const createdIssues = await Promise.all(validBooks.map(book => Issue.create({
             source: "manual",
             bookCode: book.bookCode.trim(),
@@ -61,6 +111,7 @@ const issueManualBook = async (req, res) => {
             rollNumber: studentDetails.rollNumber?.trim() || student.rollNo || "Not assigned",
             studentId: student.rollNo || `ST-${student._id.toString().slice(-4)}`
         })));
+
         res.status(201).json({ message: "Manual books issued successfully", count: createdIssues.length, issues: createdIssues });
     } catch (err) {
         console.error(err);

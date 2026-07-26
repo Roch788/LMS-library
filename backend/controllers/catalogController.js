@@ -134,9 +134,9 @@ const requestBook = async (req, res) => {
             studentId: req.user.id,
             status: 'pending',
         });
-        if (existingRequest) {
+       if (existingRequest) {
             return res.status(400).json({ message: 'You already have a pending request for this book' });
-        }
+        } 
 
         const request = await BookRequest.create({
             bookId,

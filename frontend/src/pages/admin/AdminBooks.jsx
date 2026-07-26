@@ -203,6 +203,7 @@ const AdminBooks = () => {
       if (res.ok) {
         const data = await res.json();
         setMessage(`Success: ${data.message || 'Book(s) issued successfully to student!'}`);
+        setError('');
         setBooks([
           {
             bookTitle: '',
@@ -214,10 +215,12 @@ const AdminBooks = () => {
         ]);
       } else {
         const errData = await res.json();
-        setMessage(errData.message || 'Book(s) issued successfully to student!');
+        setError(errData.message || 'Failed to issue book(s) to student.');
+        setMessage('');
       }
     } catch (e) {
-      setMessage('Book(s) issued successfully to student!');
+      setError('An error occurred while communicating with backend server.');
+      setMessage('');
     } finally {
       setLoading(false);
     }
