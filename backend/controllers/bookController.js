@@ -26,7 +26,7 @@ const calculateFine = (issue, fineRate = 10, fineInterval = "day") => {
 };
 
 
-//1 issue a manual book to a student
+//1. Issue a manual book to a student
 const issueManualBook = async (req, res) => {
     try {
         const { studentDetails, books } = req.body;
@@ -34,87 +34,71 @@ const issueManualBook = async (req, res) => {
             return res.status(400).json({ message: "No books provided for issuing" });
         }
 
-        const roll = String(studentDetails?.rollNo || "").trim();
-        let student = null;
-        if (roll) {
-            student = await User.findOne({
-                rollNo: { $regex: new RegExp(`^${roll}$`, "i") },
-                role: "user"
-            });
-            if (!student) {
-                student = await User.findOne({
-                    $or: [
-                        { rollNo: { $regex: roll, $options: "i" } },
-                        { studentId: { $regex: roll, $options: "i" } }
-                    ],
-                    role: "user"
-                });
-            }
-        }
+        // Find student by roll number
+        const rollNo = String(studentDetails?.rollNo || "").trim();
+        const student = await User.findOne({
+            rollNo: { $regex: `^${rollNo}$`, $options: "i" },
+            role: "user"
+        });
 
         if (!student) {
             return res.status(404).json({ message: "Student not found in system. Please select a valid registered student." });
         }
 
-        const todayIso = getLocalIsoDate();
-        const validBooks = books.filter(book => book.bookCode && book.title && book.dueDate);
+        const validBooks = books.filter(b => b.bookCode && b.title && b.dueDate);
         if (validBooks.length === 0) {
-            return res.status(400).json({ message: "No valid books provided for issuing. Please enter valid book details." });
+            return res.status(400).json({ message: "No valid books provided for issuing." });
         }
 
-        // Check if any book is already currently issued (unreturned) to this student or currently active
+        // Check if any requested book is ALREADY issued and NOT yet returned
         for (const book of validBooks) {
-            const trimmedCode = book.bookCode.trim();
+            const code = book.bookCode.trim();
 
-            // Check if issued to THIS student and not yet returned
-            const existingIssueForStudent = await Issue.findOne({
-                userEmail: student.email.toLowerCase(),
-                bookCode: { $regex: new RegExp(`^${trimmedCode}$`, "i") },
+            const existingIssue = await Issue.findOne({
+                bookCode: { $regex: `^${code}$`, $options: "i" },
                 returnedOn: null
             });
-            if (existingIssueForStudent) {
-                return res.status(400).json({
-                    message: `Book "${trimmedCode}" (${existingIssueForStudent.title || book.title}) is already issued to ${student.name} and has not been returned yet.`
-                });
-            }
 
-            // Check if issued to ANY student and not yet returned
-            const existingActiveIssue = await Issue.findOne({
-                bookCode: { $regex: new RegExp(`^${trimmedCode}$`, "i") },
-                returnedOn: null
-            });
-            if (existingActiveIssue) {
+            if (existingIssue) {
                 return res.status(400).json({
-                    message: `Book "${trimmedCode}" is currently issued to student "${existingActiveIssue.userName}" (${existingActiveIssue.userEmail}) and has not been returned yet.`
+                    message: `Book "${code}" is already issued to ${existingIssue.userName} and has not been returned yet.`
                 });
             }
         }
 
-        const createdIssues = await Promise.all(validBooks.map(book => Issue.create({
-            source: "manual",
-            bookCode: book.bookCode.trim(),
-            title: book.title.trim(),
-            userEmail: student.email,
-            userName: student.name,
-            issuedOn: todayIso,
-            dueDate: book.dueDate,
-            returnedOn: null,
-            fineRate: Number(book.fineRate ?? req.body.fineRate ?? 10),
-            fineInterval: book.fineInterval ?? req.body.fineInterval ?? "day",
-            manualFine: 0,
-            fineCleared: false,
-            clearedFineAmount: 0,
-            department: studentDetails.department?.trim() || student.department || "General",
-            stream: studentDetails.stream?.trim() || student.stream || "General",
-            year: studentDetails.academicYear?.trim() || student.year || "1st Year",
-            semester: studentDetails.semester?.trim() || student.semester || "Semester 1",
-            rollNumber: studentDetails.rollNumber?.trim() || student.rollNo || "Not assigned",
-            studentId: student.rollNo || `ST-${student._id.toString().slice(-4)}`
-        })));
+        // Create issue records for each book
+        const today = getLocalIsoDate();
+        const createdIssues = [];
 
-        res.status(201).json({ message: "Manual books issued successfully", count: createdIssues.length, issues: createdIssues });
+        for (const book of validBooks) {
+            const newIssue = await Issue.create({
+                source: "manual",
+                bookCode: book.bookCode.trim(),
+                title: book.title.trim(),
+                userEmail: student.email,
+                userName: student.name,
+                issuedOn: today,
+                dueDate: book.dueDate,
+                returnedOn: null,
+                fineRate: Number(book.fineRate || 10),
+                fineInterval: book.fineInterval || "day",
+                department: studentDetails.department || student.department || "General",
+                stream: studentDetails.stream || student.stream || "General",
+                year: studentDetails.academicYear || student.year || "1st Year",
+                semester: studentDetails.semester || student.semester || "Semester 1",
+                rollNumber: student.rollNo,
+                studentId: student.rollNo || `ST-${student._id.toString().slice(-4)}`
+            });
+            createdIssues.push(newIssue);
+        }
+
+        return res.status(201).json({
+            message: "Books issued successfully",
+            count: createdIssues.length,
+            issues: createdIssues
+        });
     } catch (err) {
-        console.error(err);
+        console.error("Error issuing manual book:", err);
         return res.status(500).json({
             message: "Error issuing manual book",
             error: err.message
@@ -126,8 +110,20 @@ const issueManualBook = async (req, res) => {
 //2. get all the manual issued books
 const getAllManualIssuedBooks = async (req, res) => {
     try {
-        const issues = await Issue.find({ source: "manual" }).sort({ createdAt: -1 });
-        res.status(200).json({ message: "Manual issued books fetched successfully", count: issues.length, issues });
+        const issues = await Issue.find({ source: "manual" }).sort({ createdAt: -1 }).lean();
+        const formattedIssues = issues.map(issue => {
+            const isReturned = Boolean(issue.returnedOn);
+            const fine = calculateFine(issue, issue.fineRate || 10, issue.fineInterval || "day");
+            const overdueDays = Math.max(0, -getDiffInDays(issue.dueDate));
+            const isOverdue = !isReturned && overdueDays > 0;
+            return {
+                ...issue,
+                fineAmount: `$${fine.toFixed(2)}`,
+                fineValue: fine,
+                status: isReturned ? 'returned' : (isOverdue ? 'overdue' : 'active'),
+            };
+        });
+        res.status(200).json({ message: "Manual issued books fetched successfully", count: formattedIssues.length, issues: formattedIssues });
     } catch (err) {
         console.error(err);
         return res.status(500).json({

@@ -275,21 +275,53 @@ const updateProfile = async (req, res) => {
 }
 
 
-//get all the student account(admin)
+const Issue = require("../models/issue");
+
+// Get all student accounts with their issued books (admin)
 const getAllStudents = async (req, res) => {
     try {
-        const students = await User.find({ role: "user", isVerified: true, isProfileComplete: true }).select("-password");
-        res.status(200).json({
+        const students = await User.find({ role: "user" }).select("-password").lean();
+
+        for (let student of students) {
+            const studentEmail = (student.email || "").toLowerCase();
+            const studentIssues = await Issue.find({ userEmail: studentEmail })
+                .sort({ createdAt: -1 })
+                .lean();
+
+            let activeCount = 0;
+            let overdueCount = 0;
+
+            const formattedIssues = studentIssues.map((issue) => {
+                const isReturned = Boolean(issue.returnedOn);
+                const isOverdue = !isReturned && new Date(issue.dueDate) < new Date();
+
+                if (!isReturned) {
+                    activeCount++;
+                    if (isOverdue) overdueCount++;
+                }
+
+                return {
+                    ...issue,
+                    status: isReturned ? "returned" : isOverdue ? "overdue" : "active",
+                };
+            });
+
+            student.issuedBooks = formattedIssues;
+            student.issuedBooksCount = activeCount;
+            student.overdueCount = overdueCount;
+        }
+
+        return res.status(200).json({
             message: "Students fetched successfully",
-            students: students
+            students: students,
         });
     } catch (err) {
-        console.log("error fetching all students", err);
-        res.status(500).json({
+        console.error("Error fetching all students:", err);
+        return res.status(500).json({
             message: "Failed to fetch all students. Please try again later",
-        })
+        });
     }
-}
+};
 
 //admin registration
 const registerAdmin = async (req, res) => {

@@ -14,7 +14,48 @@ const AdminBooks = () => {
   const [loading, setLoading] = useState(false);
   const [catalogBooks, setCatalogBooks] = useState([]);
 
-  // Fetch catalog books from API for auto-fill
+  const [allIssuedBooks, setAllIssuedBooks] = useState([]);
+  const [issueSearchQuery, setIssueSearchQuery] = useState('');
+
+  const fetchIssuedBooks = async () => {
+    const token = localStorage.getItem('library-auth-token');
+    if (!token) return;
+    try {
+      const res = await fetch(`${API_BASE_URL}/book/issues`, {
+        headers: { Authorization: `Bearer ${token}` },
+      });
+      if (res.ok) {
+        const data = await res.json();
+        setAllIssuedBooks(data.issues || []);
+      }
+    } catch (e) {
+      console.error('Error fetching issued books:', e);
+    }
+  };
+
+  const handleReturnBook = async (issueId) => {
+    const token = localStorage.getItem('library-auth-token');
+    try {
+      const res = await fetch(`${API_BASE_URL}/book/return/${issueId}/return`, {
+        method: 'PUT',
+        headers: { Authorization: `Bearer ${token}` },
+      });
+      if (res.ok) {
+        setMessage('Book returned successfully!');
+        setError('');
+        fetchIssuedBooks();
+      } else {
+        const errData = await res.json();
+        setError(errData.message || 'Failed to return book');
+        setMessage('');
+      }
+    } catch (e) {
+      setError('Error returning book');
+      setMessage('');
+    }
+  };
+
+  // Fetch catalog books & all issued books from API
   useEffect(() => {
     const fetchCatalog = async () => {
       const token = localStorage.getItem('library-auth-token');
@@ -32,6 +73,7 @@ const AdminBooks = () => {
       }
     };
     fetchCatalog();
+    fetchIssuedBooks();
   }, []);
 
   const [books, setBooks] = useState([
@@ -213,6 +255,7 @@ const AdminBooks = () => {
             fineInterval: 'day',
           },
         ]);
+        fetchIssuedBooks();
       } else {
         const errData = await res.json();
         setError(errData.message || 'Failed to issue book(s) to student.');
@@ -430,6 +473,107 @@ const AdminBooks = () => {
                   {loading ? 'Issuing Books...' : 'Issue Book(s) to Student'}
                 </button>
               </form>
+
+              {/* All Issued Books Table Overview */}
+              <div className="mt-12 border-t border-library-ink/10 pt-8">
+                <div className="flex flex-col md:flex-row md:items-center md:justify-between gap-4 mb-6">
+                  <div>
+                    <h2 className="text-xl font-bold text-library-ink">All Issued &amp; Borrowed Books Records</h2>
+                    <p className="text-xs text-library-ink/60 mt-1">
+                      Live overview of all books issued to students across the library system.
+                    </p>
+                  </div>
+                  <div className="flex items-center gap-3">
+                    <span className="rounded-full bg-amber-100 px-3 py-1 text-xs font-bold text-amber-800">
+                      Total Issued: {allIssuedBooks.length}
+                    </span>
+                    <span className="rounded-full bg-emerald-100 px-3 py-1 text-xs font-bold text-emerald-800">
+                      Active: {allIssuedBooks.filter(b => !b.returnedOn).length}
+                    </span>
+                  </div>
+                </div>
+
+                {/* Filter Search */}
+                <div className="relative mb-6">
+                  <Search className="absolute left-3.5 top-3 text-library-ink/40" size={16} />
+                  <input
+                    type="text"
+                    placeholder="Filter issued books by student name, roll number, title, or book code..."
+                    value={issueSearchQuery}
+                    onChange={(e) => setIssueSearchQuery(e.target.value)}
+                    className="w-full rounded-2xl border border-library-ink/10 bg-library-paper/60 pl-10 pr-4 py-2.5 text-xs font-medium text-library-ink outline-none focus:border-amber-500"
+                  />
+                </div>
+
+                {/* List of Issued Books */}
+                {allIssuedBooks.length === 0 ? (
+                  <div className="rounded-2xl border border-dashed border-library-ink/15 p-8 text-center text-xs font-medium text-library-ink/60">
+                    No books have been issued yet.
+                  </div>
+                ) : (
+                  <div className="space-y-4">
+                    {allIssuedBooks
+                      .filter((item) => {
+                        if (!issueSearchQuery.trim()) return true;
+                        const q = issueSearchQuery.toLowerCase();
+                        return (
+                          (item.userName && item.userName.toLowerCase().includes(q)) ||
+                          (item.rollNumber && item.rollNumber.toLowerCase().includes(q)) ||
+                          (item.userEmail && item.userEmail.toLowerCase().includes(q)) ||
+                          (item.title && item.title.toLowerCase().includes(q)) ||
+                          (item.bookCode && item.bookCode.toLowerCase().includes(q))
+                        );
+                      })
+                      .map((book) => (
+                        <div
+                          key={book._id}
+                          className="flex flex-col md:flex-row md:items-center justify-between rounded-2xl border border-library-ink/10 bg-white/70 p-4 shadow-sm transition hover:shadow-md gap-4"
+                        >
+                          <div className="space-y-1 min-w-0 flex-1">
+                            <div className="flex items-center gap-2 flex-wrap">
+                              <h4 className="text-sm font-bold text-library-ink truncate">{book.title}</h4>
+                              <span className="rounded-md bg-library-ink/5 px-2 py-0.5 text-[10px] font-mono font-semibold text-library-ink/70">
+                                {book.bookCode}
+                              </span>
+                              <span
+                                className={`rounded-full px-2.5 py-0.5 text-[10px] font-bold ${
+                                  book.returnedOn
+                                    ? 'bg-slate-100 text-slate-600'
+                                    : book.status === 'overdue'
+                                    ? 'bg-rose-100 text-rose-800'
+                                    : 'bg-emerald-100 text-emerald-800'
+                                }`}
+                              >
+                                {book.returnedOn ? 'RETURNED' : book.status === 'overdue' ? 'OVERDUE' : 'ACTIVE'}
+                              </span>
+                            </div>
+
+                            <p className="text-xs text-library-ink/70">
+                              Issued to: <strong className="text-library-ink">{book.userName || book.userEmail}</strong> ({book.rollNumber || book.studentId || 'No Roll'}) • {book.userEmail}
+                            </p>
+
+                            <div className="flex items-center gap-4 text-[11px] text-library-ink/60 pt-1 flex-wrap">
+                              <span>Issued: <strong>{book.issuedOn}</strong></span>
+                              <span>Due: <strong>{book.dueDate}</strong></span>
+                              <span>Fine: <strong className="text-rose-600">{book.fineAmount || '$0.00'}</strong></span>
+                              {book.returnedOn && <span>Returned On: <strong>{book.returnedOn}</strong></span>}
+                            </div>
+                          </div>
+
+                          {!book.returnedOn && (
+                            <button
+                              type="button"
+                              onClick={() => handleReturnBook(book._id)}
+                              className="rounded-xl bg-emerald-600 px-4 py-2 text-xs font-semibold text-white transition hover:bg-emerald-700 shrink-0"
+                            >
+                              Return Book
+                            </button>
+                          )}
+                        </div>
+                      ))}
+                  </div>
+                )}
+              </div>
             </div>
           </section>
         </div>
