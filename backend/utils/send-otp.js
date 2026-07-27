@@ -1,19 +1,7 @@
 require('dotenv').config();
-const nodemailer = require('nodemailer');
+const { Resend } = require('resend');
 
-const transporter = nodemailer.createTransport({
-  host: 'smtp.gmail.com',
-  port: 587,
-  secure: false,
-  family: 4,
-  pool: true,
-  connectionTimeout: 8000,
-  socketTimeout: 8000,
-  auth: {
-    user: process.env.GMAIL_USER,
-    pass: process.env.GMAIL_APP_PASSWORD,
-  },
-});
+const resend = new Resend(process.env.RESEND_API_KEY);
 
 const sendOtp = async (email, otp) => {
   // Always log OTP to server console for testing & development
@@ -21,16 +9,16 @@ const sendOtp = async (email, otp) => {
   console.log(`🔑 OTP CODE FOR ${email}: [ ${otp} ]`);
   console.log(`========================================\n`);
 
-  if (!process.env.GMAIL_USER || !process.env.GMAIL_APP_PASSWORD) {
-    console.warn("⚠️ GMAIL_USER or GMAIL_APP_PASSWORD not configured. Using console OTP logging.");
+  if (!process.env.RESEND_API_KEY) {
+    console.warn("⚠️ RESEND_API_KEY not configured. Using console OTP logging.");
     return;
   }
 
   try {
-    await transporter.sendMail({
-      from: `"ShelfWise Library" <${process.env.GMAIL_USER}>`,
+    await resend.emails.send({
+      from: 'ShelfWise Library <noreply@shelfwise.me>',
       to: email,
-      subject: "OTP Verification - ShelfWise Library",
+      subject: 'OTP Verification - ShelfWise Library',
       html: `
         <div style="font-family: Arial, sans-serif; padding: 20px; color: #14231d; max-width: 500px;">
           <h2 style="color: #14231d;">ShelfWise Library Verification</h2>
@@ -42,9 +30,9 @@ const sendOtp = async (email, otp) => {
         </div>
       `,
     });
-    console.log(`✅ OTP email sent successfully to ${email}`);
+    console.log(`✅ OTP email sent via Resend to ${email}`);
   } catch (error) {
-    console.error("⚠️ Email sending failed:", error.message || error);
+    console.error("⚠️ Resend email failed:", error.message || error);
     console.log(`👉 Fallback: Use OTP [ ${otp} ] to verify ${email}`);
   }
 };
